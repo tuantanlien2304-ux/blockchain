@@ -1,12 +1,8 @@
-DEMO DIEM DANH SINH VIEN BANG BLOCKCHAIN - HUONG DAN CHO MOI NGUOI
-==================================================================
+DEMO DIEM DANH SINH VIEN - HUONG DAN CHO MOI NGUOI
+==============================================
 
-Link trang web: <DIEN-LINK-RENDER-VAO-DAY>
-Vi du: https://diem-danh-bao.onrender.com
-
-LUU Y: ban mien phi cua Render se "ngu" sau ~15 phut khong ai dung.
-Lan dau mo link, hay cho khoang 30-60 giay de server khoi dong lai
-(trang se tu tai lai), sau do vao binh thuong.
+LINK (mo khi may/dien thoai CUNG WI-FI voi may giang vien):
+  http://192.168.1.120:8000
 
 TAI KHOAN DEMO
   Giang vien : gv01 / GVdemo123!
@@ -14,13 +10,9 @@ TAI KHOAN DEMO
   Sinh vien  : sv02 / SVdemo123!
 
 CACH THU
-  1. Dang nhap gv01 -> tab diem danh -> chon lop CNTT101
-  2. Mo buoi hoc de xem ma QR + ma diem danh 6 so
-  3. Dang xuat, dang nhap sv01 -> quet QR / nhap ma -> diem danh
-  4. Dang nhap lai gv01 -> tab Blockchain de xem nhat ky noi chuoi SHA-256
+  1. Dang nhap gv01 -> chon lop CNTT101 -> mo buoi hoc de lay ma QR
+  2. Dang xuat, dang nhap sv01 -> quet QR hoac nhap ma 6 so -> diem danh
+  3. Dang nhap lai gv01 -> tab Blockchain xem nhat ky SHA-256
 
-Dien thoai: dung ung dung Camera quet ma QR tren man hinh giang vien
-la se mo thang link diem danh.
-
-Luu y: du lieu tren ban deploy chi la du lieu demo, co the bi tao lai
-khi server khoi dong lai. Khong dung cho diem danh chinh thuc.
+Luu y: khong mo duoc link thi kiem tra may da cung Wi-Fi chua;
+mo link TRUOC 2 phut de may khac tai trang.
