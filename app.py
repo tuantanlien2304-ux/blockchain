@@ -2396,20 +2396,18 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path.startswith("/api/sessions/") and path.endswith("/qr.svg"):
-            user = self.require_role("lecturer")
-            if not user:
-                return
             parts = path.split("/")
             try:
                 session_id = int(parts[3])
                 token = parse_qs(parsed.query)["token"][0]
+                if parse_qr_token(token) != session_id:
+                    raise ValueError
                 with connect() as db:
-                    owned = db.execute(
-                        """SELECT 1 FROM sessions s JOIN classes c ON c.id=s.class_id
-                        WHERE s.id=? AND c.lecturer_username=?""",
-                        (session_id, user.username),
+                    session = db.execute(
+                        "SELECT status FROM sessions WHERE id=?",
+                        (session_id,),
                     ).fetchone()
-                if not owned or parse_qr_token(token) != session_id:
+                if not session or session["status"] != "open":
                     raise ValueError
                 self.respond(200, qr_svg(f"{self.public_base_url()}/?code={token}"), "image/svg+xml")
             except (ValueError, KeyError, IndexError):

@@ -155,7 +155,6 @@ class AttendanceDemoTests(unittest.TestCase):
         image = self.request(
             "GET",
             f"/api/sessions/{session['id']}/qr.svg?token={session['qr_token']}",
-            token=teacher,
         )
         self.assertIn(b"<svg", image)
         # Dọn dẹp: xoá lớp/buổi do chính test này tạo để dữ liệu demo không bị lẫn lớp kiểm thử
