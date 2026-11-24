@@ -1166,6 +1166,7 @@ HTML = r"""<!doctype html>
         <select id="availableStudentsSelect" style="min-width: 240px;"></select>
         <input id="studentUsername" placeholder="Hoặc gõ trực tiếp MSV..." style="width: 170px;">
         <button onclick="enrollStudent()">+ Ghi danh vào lớp</button>
+        <button class="btn-outline" onclick="enrollAllStudents()">+ Ghi danh toàn bộ sinh viên</button>
       </div>
       <div id="selectedClass" style="font-size: 13px; color: var(--muted); margin: 4px 0 16px 0;"></div>
 
@@ -1802,6 +1803,20 @@ async function enrollStudent() {
     });
     document.querySelector('#studentUsername').value = '';
     show(`Đã ghi danh sinh viên ${studentInput} vào lớp học thành công.`);
+  } catch (e) {
+    show(e.message);
+  }
+}
+
+async function enrollAllStudents() {
+  try {
+    const classId = document.querySelector('#classes').value;
+    if (!classId) throw Error('Vui lòng chọn lớp cần ghi danh.');
+    if (!confirm('Ghi danh toàn bộ sinh viên hiện có vào lớp đang chọn?')) return;
+
+    const result = await api('/api/classes/' + classId + '/enrollments/all', 'POST', {});
+    await loadSessions();
+    show(`Đã ghi danh thêm ${result.added_count}/${result.total_students} sinh viên; ${result.already_enrolled_count} sinh viên đã có trong lớp.`);
   } catch (e) {
     show(e.message);
   }
@@ -2577,6 +2592,52 @@ class Handler(BaseHTTPRequestHandler):
                 )
             except sqlite3.IntegrityError:
                 self.respond(409, {"error": "Mã lớp đã tồn tại."})
+            return
+
+        if path.startswith("/api/classes/") and path.endswith("/enrollments/all"):
+            user = self.require_role("lecturer")
+            if not user:
+                return
+            try:
+                class_id = int(path.split("/")[3])
+            except (ValueError, IndexError):
+                self.respond(400, {"error": "Mã lớp không hợp lệ."})
+                return
+            with connect() as db:
+                owned = db.execute(
+                    "SELECT 1 FROM classes WHERE id=? AND lecturer_username=?",
+                    (class_id, user.username),
+                ).fetchone()
+                if not owned:
+                    self.respond(404, {"error": "Không tìm thấy lớp thuộc quyền giảng viên."})
+                    return
+
+                total_students = db.execute(
+                    "SELECT COUNT(*) FROM users WHERE role='student'"
+                ).fetchone()[0]
+                cursor = db.execute(
+                    """INSERT OR IGNORE INTO enrollments(class_id, student_username)
+                    SELECT ?, student.username
+                    FROM users student
+                    WHERE student.role='student'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM enrollments existing
+                        WHERE existing.class_id=?
+                        AND existing.student_username IN (student.username, student.alias)
+                    )""",
+                    (class_id, class_id),
+                )
+                added_count = cursor.rowcount
+
+            self.respond(
+                200,
+                {
+                    "class_id": class_id,
+                    "total_students": total_students,
+                    "added_count": added_count,
+                    "already_enrolled_count": total_students - added_count,
+                },
+            )
             return
 
         if path.startswith("/api/classes/") and path.endswith("/enrollments"):

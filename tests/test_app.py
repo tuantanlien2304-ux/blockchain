@@ -301,6 +301,57 @@ class AttendanceDemoTests(unittest.TestCase):
         session_ids = [session["id"] for session in sessions]
         self.assertEqual(len(session_ids), len(set(session_ids)))
 
+    def test_lecturer_can_enroll_all_students_into_owned_class(self):
+        teacher = self.login("gv01", "GVdemo123!")
+        student = self.login("sv02", "SVdemo123!")
+        class_data = self.request(
+            "POST",
+            "/api/classes",
+            {
+                "course_code": "CS-BULK",
+                "code": "BULK101",
+                "name": "Lớp ghi danh hàng loạt",
+            },
+            teacher,
+            expected=201,
+        )
+        class_id = class_data["id"]
+        self.request(
+            "POST",
+            f"/api/classes/{class_id}/enrollments",
+            {"student_username": "sv02"},
+            teacher,
+            expected=201,
+        )
+
+        result = self.request(
+            "POST",
+            f"/api/classes/{class_id}/enrollments/all",
+            {},
+            teacher,
+            expected=200,
+        )
+        self.assertEqual(4, result["total_students"])
+        self.assertEqual(3, result["added_count"])
+        self.assertEqual(1, result["already_enrolled_count"])
+
+        repeated = self.request(
+            "POST",
+            f"/api/classes/{class_id}/enrollments/all",
+            {},
+            teacher,
+            expected=200,
+        )
+        self.assertEqual(0, repeated["added_count"])
+        self.assertEqual(4, repeated["already_enrolled_count"])
+        self.request(
+            "POST",
+            f"/api/classes/{class_id}/enrollments/all",
+            {},
+            student,
+            expected=403,
+        )
+
     def test_enrollment_and_session_closing(self):
         teacher = self.login("gv01", "GVdemo123!")
         student = self.login("sv02", "SVdemo123!")
