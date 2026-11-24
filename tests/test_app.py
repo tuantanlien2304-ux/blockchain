@@ -20,6 +20,8 @@ class AttendanceDemoTests(unittest.TestCase):
         app.SECRET_PATH = root / ".demo-secret"
         app.BASE_URL = "http://127.0.0.1"
         app.DEMO_MODE = True
+        # Không nạp danh sách lớp CNTT2.K25 vào test để test tự kiểm soát dữ liệu
+        app.STUDENTS_PATH = root / "khong-co-students.json"
         app.SESSIONS.clear()
         app.init_db()
         self.server = app.ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)

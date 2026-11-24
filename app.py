@@ -182,7 +182,8 @@ def init_db() -> None:
                 student_id TEXT,
                 class_name TEXT,
                 wallet_address TEXT NOT NULL,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                list_class_code TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_users_student_id ON users(student_id);
             CREATE INDEX IF NOT EXISTS idx_users_alias ON users(alias);
@@ -239,6 +240,11 @@ def init_db() -> None:
         )
 
         # CẬP NHẬT CỘT NẾU CHƯA CÓ
+        user_cols = {row["name"] for row in db.execute("PRAGMA table_info(users)").fetchall()}
+        if "list_class_code" not in user_cols:
+            # Lớp danh sách (roster) mà tài khoản thuộc về — ví dụ CNTT2-K25
+            db.execute("ALTER TABLE users ADD COLUMN list_class_code TEXT")
+
         class_cols = {row["name"] for row in db.execute("PRAGMA table_info(classes)").fetchall()}
         if "course_code" not in class_cols:
             db.execute("ALTER TABLE classes ADD COLUMN course_code TEXT NOT NULL DEFAULT ''")
@@ -349,6 +355,9 @@ def init_db() -> None:
                         (class_id, u["alias"]),
                     )
 
+        # NẠP DANH SÁCH LỚP CNTT2.K25 TỪ students.json (tài khoản = mã SV, mật khẩu = 1)
+        seed_class_list(db)
+
         # TẠO BUỔI HỌC MẪU
         if not db.execute("SELECT 1 FROM sessions WHERE class_id = ?", (class_id,)).fetchone():
             db.execute(
@@ -363,6 +372,95 @@ def init_db() -> None:
                     new_attendance_code(db),
                 ),
             )
+
+
+STUDENTS_PATH = Path(os.environ.get("ATTENDANCE_STUDENTS", ROOT / "students.json"))
+CLASS_LIST_CODE = "CNTT2-K25"
+CLASS_LIST_NAME = "Lớp CNTT2.K25"
+CLASS_LIST_PASSWORD = "1"
+
+
+def class_list_student_code(db: sqlite3.Connection, stt: int) -> str:
+    """Mã SV dạng 2431482010xx theo số thứ tự trong danh sách lớp (tăng dần 10, 11, ...)."""
+    base = "2431482010"
+    suffix = str(10 + stt - 1)
+    if len(suffix) > 2:
+        return base + suffix
+    code = base[: len(base) - len(suffix)] + suffix
+    # Tránh trùng với tài khoản đã có (ví dụ sv01 = 243148201076)
+    candidate = code
+    offset = 0
+    while db.execute("SELECT 1 FROM users WHERE username=?", (candidate,)).fetchone():
+        offset += 1
+        candidate = base[0:9] + str(30 + offset)
+    return candidate
+
+
+def seed_class_list(db: sqlite3.Connection) -> int:
+    """Tạo tài khoản + ghi danh cho từng sinh viên trong students.json. Idempotent."""
+    if not STUDENTS_PATH.exists():
+        return 0
+    try:
+        students = json.loads(STUDENTS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0
+    db.execute(
+        """INSERT OR IGNORE INTO classes(code, course_code, name, lecturer_username)
+        VALUES(?, ?, ?, ?)""",
+        (CLASS_LIST_CODE, "CNTT2", CLASS_LIST_NAME, "gv01"),
+    )
+    row = db.execute("SELECT id FROM classes WHERE code=?", (CLASS_LIST_CODE,)).fetchone()
+    if not row:
+        return 0
+    list_class_id = row["id"]
+    created = 0
+    for student in students:
+        name = str(student.get("name") or "").strip()
+        stt = int(student.get("stt") or 0)
+        if not name or not stt:
+            continue
+        alias = f"cntt2-{stt:02d}"
+        # Tài khoản sẵn có cùng tên + lớp (như sv01 "Trần Gia Bảo") thì dùng lại, không tạo trùng.
+        # Điều kiện list_class_code IS NULL để không lấy nhầm tài khoản của lần nạp trước.
+        exists = db.execute(
+            """SELECT username FROM users
+            WHERE alias=? OR (name=? AND class_name=? AND list_class_code IS NULL) LIMIT 1""",
+            (alias, name, "CNTT2.K25"),
+        ).fetchone()
+        if exists:
+            username = exists["username"]
+            # Đồng bộ tài khoản về đúng lớp danh sách: mật khẩu "1" để test nhanh
+            db.execute(
+                "UPDATE users SET alias=?, password=?, student_id=?, list_class_code=? WHERE username=?",
+                (alias, CLASS_LIST_PASSWORD, username, CLASS_LIST_CODE, username),
+            )
+        else:
+            username = class_list_student_code(db, stt)
+            db.execute(
+                """INSERT INTO users (
+                    username, alias, password, role, name, student_id, class_name,
+                    wallet_address, created_at, list_class_code
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    username,
+                    alias,
+                    CLASS_LIST_PASSWORD,
+                    "student",
+                    name,
+                    username,
+                    "CNTT2.K25",
+                    generate_wallet(username),
+                    now_iso(),
+                    CLASS_LIST_CODE,
+                ),
+            )
+            created += 1
+        for key in (username, alias):
+            db.execute(
+                "INSERT OR IGNORE INTO enrollments(class_id, student_username) VALUES(?, ?)",
+                (list_class_id, key),
+            )
+    return created
 
 
 def find_user_in_db(db: sqlite3.Connection, identifier: str) -> dict[str, object] | None:
@@ -2680,6 +2778,13 @@ class Handler(BaseHTTPRequestHandler):
                         WHERE class_id=? AND student_username IN (?, ?, ?)""",
                         (session["class_id"],) + st_keys,
                     ).fetchone()
+                    if not enrolled:
+                        # Sinh viên thuộc danh sách lớp (VD CNTT2.K25) được điểm danh mọi buổi của lớp đó
+                        enrolled = db.execute(
+                            """SELECT 1 FROM users u JOIN classes c ON c.code=u.list_class_code
+                            WHERE c.id=? AND (u.username=? OR u.alias=?)""",
+                            (session["class_id"], user.username, user.alias or user.username),
+                        ).fetchone()
                     if not enrolled:
                         self.respond(403, {"error": "Bạn chưa được ghi danh vào lớp này."})
                         return

@@ -1,18 +1,25 @@
-DEMO DIEM DANH SINH VIEN - HUONG DAN CHO MOI NGUOI
-==============================================
+DEMO DIEM DANH SINH VIEN - LOP CNTT2.K25 - HUONG DAN
+===================================================
 
 LINK (mo khi may/dien thoai CUNG WI-FI voi may giang vien):
   http://192.168.1.120:8000
 
-TAI KHOAN DEMO
+TAI KHOAN
   Giang vien : gv01 / GVdemo123!
-  Sinh vien  : sv01 / SVdemo123!
-  Sinh vien  : sv02 / SVdemo123!
+  Sinh vien  : dung MA SV cua minh / mat khau 1
+               (danh sach ma SV o file TAI-KHOAN-lop-CNTT2-K25.txt)
+  Vi du      : 2431482010 / 1   (Dong Viet Anh)
 
-CACH THU
-  1. Dang nhap gv01 -> chon lop CNTT101 -> mo buoi hoc de lay ma QR
-  2. Dang xuat, dang nhap sv01 -> quet QR hoac nhap ma 6 so -> diem danh
-  3. Dang nhap lai gv01 -> tab Blockchain xem nhat ky SHA-256
+CACH THU (sinh vien)
+  1. Mo link tren dien thoai -> dang nhap ma SV + mat khau 1
+  2. Vao tab Diem danh -> Quet QR (hoac nhap ma 6 so giang vien doc)
+  3. Xem lai trang ca nhan de kiem tra da diem danh chua
+
+CACH THU (giang vien)
+  1. Dang nhap gv01 -> Lop CNTT2-K25 (48 sinh vien)
+  2. Tao buoi hoc -> chieu QR len man hinh cho ca lop quet
+  3. Bam "Danh Sach Sinh Vien" de xem ai da co mat
+  4. Tab Blockchain: nhat ky noi chuoi SHA-256
 
 Luu y: khong mo duoc link thi kiem tra may da cung Wi-Fi chua;
-mo link TRUOC 2 phut de may khac tai trang.
+mo link TRUOC 2 phut de tai trang.
