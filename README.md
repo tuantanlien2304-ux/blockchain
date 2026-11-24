@@ -118,12 +118,10 @@ ATTENDANCE_EPHEMERAL=1 ATTENDANCE_HOST=0.0.0.0 \
 Danh sách buổi học, thống kê và danh sách sinh viên trong cửa sổ buổi học tự làm mới mỗi 5 giây khi người dùng đang đăng nhập; buổi mới và lượt điểm danh sẽ xuất hiện trên các dashboard đang mở.
 
 ```powershell
-python -m unittest discover -s tests -v | Out-File evidence/test-results.txt -Encoding utf8
+python -m unittest discover -s tests -v
 ```
 
-Bộ kiểm thử Python hiện có 14 kịch bản (phân quyền, tạo nhiều buổi, giải mã QR từ ảnh, điểm danh một lần, trigger chỉ-ghi, phát hiện can thiệp, khôi phục chuỗi, giới hạn chế độ demo). Kiểm thử Smart Contract (8 kịch bản Mocha/Chai) nằm ở `tests/StudentAttendance.test.js` và cần cài Hardhat mới chạy được.
-
-Kết quả chạy kiểm thử được lưu ở [evidence/test-results.txt](evidence/test-results.txt); mã QR SVG mẫu ở [evidence/sample-qr.svg](evidence/sample-qr.svg).
+Bộ kiểm thử Python gồm 14 kịch bản (phân quyền, tạo nhiều buổi, giải mã QR từ ảnh, điểm danh một lần, trigger chỉ-ghi, phát hiện can thiệp, khôi phục chuỗi, giới hạn chế độ demo).
 
 Các kiểm thử bao gồm: vai trò sinh viên không được tạo lớp/đọc audit toàn cục; giảng viên tạo lớp, ghi danh sinh viên, tạo/đóng buổi và SVG QR; buổi đã đóng và điểm danh lần hai bị từ chối; trigger SQLite chặn sửa lịch sử; nếu cố ý gỡ trigger rồi sửa dữ liệu trực tiếp thì hàm kiểm chứng chuỗi phát hiện sai lệch; QR giả/chỉnh sửa bị từ chối.
 
