@@ -76,10 +76,10 @@ App vẫn là HTTP server thuần Python nên có thể chạy trên mọi máy 
 ```bash
 pip install -r requirements.txt
 ATTENDANCE_HOST=0.0.0.0 ATTENDANCE_BASE_URL=https://ten-mien-cua-ban \
-  gunicorn --workers 1 --threads 8 --bind 0.0.0.0:8000 wsgi:application
+  python wsgi.py
 ```
 
-Đặt gunicorn sau Nginx/Caddy để có HTTPS và tên miền. **Chỉ dùng 1 worker** vì SQLite và phiên đăng nhập (lưu trong RAM) cần dùng chung một tiến trình; số luồng `--threads 8` phục vụ đủ tester.
+Đặt Nginx/Caddy trước app để có HTTPS và tên miền. Chỉ chạy một process vì phiên đăng nhập lưu trong RAM; HTTP server tích hợp xử lý request đồng thời bằng threads.
 
 ### 2. Docker (Render, Railway, Fly.io, VPS...)
 
@@ -89,19 +89,13 @@ docker run -p 8000:8000 -e ATTENDANCE_BASE_URL=http://localhost:8000 \
   -v diem-danh-data:/data diem-danh
 ```
 
-Có sẵn `Dockerfile`, `Procfile` (Heroku/Railway) và `render.yaml`. Container đọc ghi dữ liệu tại `/data` (mount volume để giữ dữ liệu giữa các lần deploy).
+Có sẵn `Dockerfile`, `Procfile` (Heroku/Railway) và `render.yaml`. Các cấu hình này chạy app bằng HTTP server tích hợp (không phải WSGI). Container đọc ghi dữ liệu tại `/data` (mount volume để giữ dữ liệu giữa các lần deploy).
 
 ### 3. Serverless (Vercel / Netlify / AWS Lambda)
 
-Các nền tảng này **không giữ được SQLite** nên dùng chế độ dữ liệu tạm: mỗi lần khởi động lại, database và tài khoản demo
-được tạo mới (đủ để demo, không lưu lịch sử điểm danh lâu dài).
+App yêu cầu một tiến trình HTTP chạy liên tục và filesystem có thể ghi. Các nền tảng serverless kiểu function không phù hợp: SQLite và phiên đăng nhập không được giữ ổn định giữa các request. Dùng Render / Railway / Fly.io / VPS + Docker thay thế.
 
-```bash
-ATTENDANCE_EPHEMERAL=1 ATTENDANCE_HOST=0.0.0.0 \
-  gunicorn --workers 1 --threads 8 --bind 0.0.0.0:$PORT wsgi:application
-```
-
-> Lưu ý riêng với **Vercel**: chưa có adapter Python WSGI chính thức cho định dạng `@vercel/python` mới, và SQLite không chạy được trên filesystem serverless (dữ liệu sẽ mất ngay khi request kết thúc). Với nhu cầu "gửi link cho mọi người vào", **Render / Railway / Fly.io / VPS + Docker** là lựa chọn đúng; `render.yaml` đã cấu hình sẵn.
+> Lưu ý riêng với **Vercel**: app dùng `BaseHTTPRequestHandler`, không phải WSGI; không thể chạy trực tiếp với adapter WSGI của `@vercel/python`. Hơn nữa, SQLite không phù hợp với filesystem serverless.
 
 ### Biến môi trường dùng khi deploy
 

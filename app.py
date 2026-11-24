@@ -2884,9 +2884,5 @@ def main() -> None:
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
 
 
-# Server web (gunicorn / WSGI) gọi app này; wsgi.py và Dockerfile cũng dùng lại
-application = Handler
-
-
 if __name__ == "__main__":
     main()
