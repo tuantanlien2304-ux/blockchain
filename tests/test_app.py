@@ -125,8 +125,6 @@ class AttendanceDemoTests(unittest.TestCase):
             token=teacher,
         )
         self.assertIn(b"<svg", image)
-        evidence = Path(__file__).resolve().parents[1] / "evidence" / "sample-qr.svg"
-        evidence.write_bytes(image)
         # Dọn dẹp: xoá lớp/buổi do chính test này tạo để dữ liệu demo không bị lẫn lớp kiểm thử
         with app.connect() as db:
             db.execute("DELETE FROM enrollments WHERE class_id = ?", (class_data["id"],))
