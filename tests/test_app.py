@@ -86,6 +86,37 @@ class AttendanceDemoTests(unittest.TestCase):
             "POST", "/api/login", {"username": username, "password": password}
         )["token"]
 
+    def test_login_by_full_name_ignores_case_and_outer_whitespace(self):
+        response = self.request(
+            "POST",
+            "/api/login",
+            {"username": "  trẦN GIA BẢO  ", "password": "SVdemo123!"},
+        )
+        self.assertEqual("student", response["role"])
+        self.assertEqual("Trần Gia Bảo", response["name"])
+
+    def test_login_by_duplicate_name_is_rejected(self):
+        with app.connect() as db:
+            db.execute(
+                """INSERT INTO users(
+                    username, password, role, name, wallet_address, created_at
+                ) VALUES(?, ?, ?, ?, ?, ?)""",
+                (
+                    "duplicate-student",
+                    "password",
+                    "student",
+                    "Trần Gia Bảo",
+                    "0xduplicate",
+                    app.now_iso(),
+                ),
+            )
+        self.request(
+            "POST",
+            "/api/login",
+            {"username": "Trần Gia Bảo", "password": "SVdemo123!"},
+            expected=409,
+        )
+
     def test_role_permissions_and_class_session_qr(self):
         teacher = self.login("gv01", "GVdemo123!")
         student = self.login("sv01", "SVdemo123!")

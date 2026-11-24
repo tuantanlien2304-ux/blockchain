@@ -12,6 +12,7 @@ import secrets
 import sqlite3
 import stat
 import time
+import unicodedata
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -431,8 +432,8 @@ def seed_class_list(db: sqlite3.Connection) -> int:
             username = exists["username"]
             # Đồng bộ tài khoản về đúng lớp danh sách: mật khẩu "1" để test nhanh
             db.execute(
-                "UPDATE users SET alias=?, password=?, student_id=?, list_class_code=? WHERE username=?",
-                (alias, CLASS_LIST_PASSWORD, username, CLASS_LIST_CODE, username),
+                "UPDATE users SET alias=?, password=?, list_class_code=? WHERE username=?",
+                (alias, CLASS_LIST_PASSWORD, CLASS_LIST_CODE, username),
             )
         else:
             username = class_list_student_code(db, stt)
@@ -470,6 +471,25 @@ def find_user_in_db(db: sqlite3.Connection, identifier: str) -> dict[str, object
         (identifier, identifier, identifier),
     ).fetchone()
     return dict(row) if row else None
+
+
+def find_login_user_in_db(
+    db: sqlite3.Connection, identifier: str
+) -> tuple[dict[str, object] | None, bool]:
+    user = find_user_in_db(db, identifier)
+    if user:
+        return user, False
+
+    normalized_name = " ".join(unicodedata.normalize("NFKC", identifier).casefold().split())
+    matches = [
+        dict(row)
+        for row in db.execute("SELECT * FROM users").fetchall()
+        if " ".join(unicodedata.normalize("NFKC", str(row["name"])).casefold().split())
+        == normalized_name
+    ]
+    if len(matches) > 1:
+        return None, True
+    return (matches[0] if matches else None), False
 
 
 def new_attendance_code(db: sqlite3.Connection) -> str:
@@ -1090,21 +1110,16 @@ HTML = r"""<!doctype html>
 <div class="container">
   <!-- AUTH CARD -->
   <section class="card" id="authSection">
-    <h2>🔐 1. Đăng Nhập Hệ Thống (Bằng Mã Sinh Viên)</h2>
+    <h2>🔐 1. Đăng Nhập Hệ Thống</h2>
     <div class="row">
-      <input id="username" placeholder="Mã Sinh Viên (MSV) hoặc Username" style="min-width: 200px;">
+      <input id="username" placeholder="Họ tên đầy đủ hoặc tài khoản giảng viên" style="min-width: 200px;">
       <input id="password" placeholder="Mật khẩu" type="password" style="min-width: 140px;">
       <button onclick="login()">⚡ Đăng nhập</button>
     </div>
     <p id="authMessage" role="alert" style="color:var(--danger);"></p>
     <div style="margin-top: 14px; font-size: 13px; color: var(--muted); line-height: 1.8;">
-      💡 <b>Hướng dẫn đăng nhập bằng MSV (Dữ liệu đã lưu trong Database):</b><br>
-      • <b>Giảng viên:</b> Tên đăng nhập: <code style="background:#eee;padding:2px 5px;border-radius:4px;">gv01</code> / Mật khẩu: <code style="background:#eee;padding:2px 5px;border-radius:4px;">GVdemo123!</code> (TS. Lê Đắc Nhường)<br>
-      • <b>Sinh viên 1:</b> Tên đăng nhập: <code style="background:#eee;padding:2px 5px;border-radius:4px;">243148201076</code> (Trần Gia Bảo - Lớp CNTT2.K25)<br>
-      • <b>Sinh viên 2:</b> Tên đăng nhập: <code style="background:#eee;padding:2px 5px;border-radius:4px;">243148201086</code> (Hoàng Lê Minh - Lớp CNTT2.K25)<br>
-      • <b>Sinh viên 3:</b> Tên đăng nhập: <code style="background:#eee;padding:2px 5px;border-radius:4px;">24314820105</code> (Nguyễn Hồng Sơn - Lớp CNTT2.K25)<br>
-      • <b>Sinh viên 4:</b> Tên đăng nhập: <code style="background:#eee;padding:2px 5px;border-radius:4px;">243148201072</code> (Đồng Đức Cường - Lớp CNTT2.K25)<br>
-      <i>(Mật khẩu mặc định của sinh viên là: <code style="background:#eee;padding:2px 5px;border-radius:4px;">SVdemo123!</code>)</i>
+      💡 Sinh viên đăng nhập bằng <b>họ tên đầy đủ</b> và mật khẩu được cấp (tài khoản danh sách lớp dùng mật khẩu <code>1</code>).<br>
+      Giảng viên tiếp tục đăng nhập bằng tài khoản <code>gv01</code>.
     </div>
   </section>
 
@@ -2463,9 +2478,12 @@ class Handler(BaseHTTPRequestHandler):
             username_in = str(data.get("username", "")).strip()
             password_in = str(data.get("password", ""))
             with connect() as db:
-                user = find_user_in_db(db, username_in)
+                user, ambiguous_name = find_login_user_in_db(db, username_in)
+            if ambiguous_name:
+                self.respond(409, {"error": "Có nhiều tài khoản trùng họ tên. Vui lòng liên hệ giảng viên."})
+                return
             if not user or not hmac.compare_digest(password_in, user["password"]):
-                self.respond(401, {"error": "Mã sinh viên hoặc mật khẩu không chính xác."})
+                self.respond(401, {"error": "Họ tên/tài khoản hoặc mật khẩu không chính xác."})
                 return
 
             token = secrets.token_urlsafe(32)
