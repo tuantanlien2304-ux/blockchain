@@ -1,0 +1,26 @@
+DEMO DIEM DANH SINH VIEN BANG BLOCKCHAIN - HUONG DAN CHO MOI NGUOI
+==================================================================
+
+Link trang web: <DIEN-LINK-RENDER-VAO-DAY>
+Vi du: https://diem-danh-bao.onrender.com
+
+LUU Y: ban mien phi cua Render se "ngu" sau ~15 phut khong ai dung.
+Lan dau mo link, hay cho khoang 30-60 giay de server khoi dong lai
+(trang se tu tai lai), sau do vao binh thuong.
+
+TAI KHOAN DEMO
+  Giang vien : gv01 / GVdemo123!
+  Sinh vien  : sv01 / SVdemo123!
+  Sinh vien  : sv02 / SVdemo123!
+
+CACH THU
+  1. Dang nhap gv01 -> tab diem danh -> chon lop CNTT101
+  2. Mo buoi hoc de xem ma QR + ma diem danh 6 so
+  3. Dang xuat, dang nhap sv01 -> quet QR / nhap ma -> diem danh
+  4. Dang nhap lai gv01 -> tab Blockchain de xem nhat ky noi chuoi SHA-256
+
+Dien thoai: dung ung dung Camera quet ma QR tren man hinh giang vien
+la se mo thang link diem danh.
+
+Luu y: du lieu tren ban deploy chi la du lieu demo, co the bi tao lai
+khi server khoi dong lai. Khong dung cho diem danh chinh thuc.
