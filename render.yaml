@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: diem-danh-blockchain
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: ATTENDANCE_DATA_DIR
+        value: /data
+      - key: ATTENDANCE_EPHEMERAL
+        value: "1"
+      - key: ATTENDANCE_SECRET_KEY
+        generateValue: true
